@@ -52,18 +52,26 @@ if (args.encode) {
   process.exit(0);
 }
 
-// --soft-gl: no GPU on this machine; render WebGL in software (SwiftShader), which Chrome only allows when asked.
+// --soft-gl: no GPU on this machine; render WebGL in software (SwiftShader), which Chrome only allows when asked. Slow:
+// prefer --llvmpipe where Mesa and Xvfb are installed.
 // --gpu-angle=vulkan|gl-egl: headless Linux on an NVIDIA GPU (e.g. a cloud or cluster node); plain --use-gl=angle gets
 // no WebGL context there. Check which GPU Chrome actually lands on with gpu_probe.mjs.
 const ANGLE = { vulkan: ['--use-angle=vulkan', '--enable-features=Vulkan'], 'gl-egl': ['--use-angle=gl-egl'] };
 if (args['gpu-angle'] && !ANGLE[args['gpu-angle']]) { console.error(`--gpu-angle must be one of ${Object.keys(ANGLE)}`); process.exit(1); }
-const gpu = args['soft-gl'] ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+// --llvmpipe: no GPU, but Mesa is installed (most Linux machines). Run under a virtual display:
+//   xvfb-run -a node render.mjs --llvmpipe ...
+// Chrome then renders WebGL through Mesa's llvmpipe, around ten times faster here than SwiftShader, and keeps 2D canvases
+// on the CPU (p5.brush draws its fills into one, and a software "GPU" canvas makes every watercolour fill take seconds).
+const LLVMPIPE = !!args.llvmpipe;
+if (LLVMPIPE && !process.env.DISPLAY) { console.error('--llvmpipe needs a display: run it as  xvfb-run -a node render.mjs --llvmpipe ...'); process.exit(1); }
+const gpu = LLVMPIPE ? ['--use-gl=angle', '--use-angle=gl', '--disable-accelerated-2d-canvas']
+  : args['soft-gl'] ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-accelerated-2d-canvas']
   : args['gpu-angle'] ? ANGLE[args['gpu-angle']]
   : process.platform === 'win32' ? ['--use-angle=d3d11'] : process.platform === 'darwin' ? ['--use-angle=metal'] : ['--use-gl=angle'];
 // Ubuntu 23.10+ blocks Chrome's user-namespace sandbox; headless rendering of local files doesn't need it.
 const sandbox = process.platform === 'linux' ? ['--no-sandbox'] : [];
 const browser = await puppeteer.launch({
-  executablePath: CHROME, headless: true, protocolTimeout: 0,
+  executablePath: CHROME, headless: !LLVMPIPE, protocolTimeout: 0,
   args: [...sandbox, '--allow-file-access-from-files', '--ignore-gpu-blocklist', ...gpu, '--enable-gpu-rasterization', '--window-size=1920,1080', '--disable-renderer-backgrounding', '--disable-background-timer-throttling']
 });
 async function openPage(tag = '') {

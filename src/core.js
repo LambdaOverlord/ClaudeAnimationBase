@@ -291,7 +291,8 @@ async function setup() {
   brush.scaleBrushes(5); defineBrushes();
   paperG = makePaper(); grainC = makeGrain(); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
   outC = document.getElementById('out'); outX = outC.getContext('2d');
-  await document.fonts.load('100px "Permanent Marker"');
+  // the lettering font comes over the network; a film with no lettering shouldn't fail to render when it can't be fetched
+  try { await document.fonts.load('100px "Permanent Marker"'); } catch (e) { console.warn('lettering font not loaded: ' + e.message); }
   window.ready = true;
   if (!location.search.includes('render')) devUI();
 }

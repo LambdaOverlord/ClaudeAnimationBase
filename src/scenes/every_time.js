@@ -20,7 +20,7 @@
   const HUES = [PAL.rose, PAL.teal, PAL.ochre, PAL.violet, PAL.sap, PAL.sky, PAL.indigo, '#F2A283', '#E2476E', '#8E82E8'];
 
   // ---------- times ----------
-  const tIn = .4, tDown = 3.0, tTug1 = 3.5, tTug2 = 4.1, tGiveUp = 4.75, tDabs = 5.3, tPop = 7.5,
+  const tIn = .3, tDown = 3.0, tTug1 = 3.5, tTug2 = 4.1, tGiveUp = 4.75, tDabs = 5.3, tPop = 7.5,
         tOpen = 8.15, tSee = 9.15, tLead = 10.0, tWalk0 = 10.9, tWalk1 = 11.7, tIdea = 12.5, tTake = 13.2, tHand = 13.6, tPlant = 13.9,
         tPat1 = 14.375, tPat2 = 14.6875, tGrow = 15.0, tPet = 15.5, tLineHold = 16.8, tCol = 17.5, tMead = 18.0, tHue = 18.2, tJoy = 18.6,
         tFront = 19.4, tPerch = 20.6, tToC = 21.6, tBoop = 22.5, tLift = 23.6, tGone = 25.3, tTurn = 26.4, tRest = 27.0, tFleck = 27.5,
@@ -116,14 +116,18 @@
   const KBOT = Math.max(...KNOT.map(p => p[1])), KY0 = G - KBOT * RK + 4, K2Y = NG - KBOT * RK + 4;   // centre height that rests the knot on the ground
   const knotPts = (c, r, sq = 0, rot = 0) => KNOT.map(p => { const q = rot2([p[0] * r * (1 + sq * .5), p[1] * r * (1 - sq)], rot); return [c[0] + q[0], c[1] + q[1]]; });
   // The loose end: NS points from A to B with some sag; via (weight w) is a hand holding it part-way.
+  const V1 = .5, V2 = .68;   // where the two leaves leave the stem
+  const VS = [...Array.from({ length: 14 }, (_, i) => i / 14 * V1), ...Array(17).fill(V1), ...Array.from({ length: 6 }, (_, i) => lerp(V1, V2, (i + 1) / 7)),
+    ...Array(17).fill(V2), ...Array.from({ length: 10 }, (_, i) => lerp(V2, 1, (i + 1) / 10))];   // NS values: the stem's own spacing
   function thread(A, B, sag, via = null, w = 0, u = .7) {
-    const P = [];
-    for (let i = 0; i < NS; i++) {
-      const v = i / (NS - 1), a = [lerp(A[0], B[0], v), lerp(A[1], B[1], v) + sag * Math.sin(Math.PI * v)];
-      if (w > 0) { const b = v < u ? [lerp(A[0], via[0], ease(v / u)), lerp(A[1], via[1], v / u) + sag * .7 * Math.sin(Math.PI * v / u)] : mix2(via, B, (v - u) / (1 - u)); P.push(mix2(a, b, w)); }
-      else P.push(a);
-    }
-    return P;
+    const dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len, ny = dx / len; if (ny < -.2 || (Math.abs(ny) <= .2 && nx < 0)) { nx = -nx; ny = -ny; }   // slack bows down, or to the right when it hangs
+    return VS.map(v => {
+      const bow = sag * Math.sin(Math.PI * v), a = [lerp(A[0], B[0], v) + nx * bow, lerp(A[1], B[1], v) + ny * bow];
+      if (w <= 0) return a;
+      const b = v < u ? [lerp(A[0], via[0], ease(v / u)), lerp(A[1], via[1], v / u) + sag * .7 * Math.sin(Math.PI * v / u)] : mix2(via, B, (v - u) / (1 - u));
+      return mix2(a, b, w);
+    });
   }
   // A flower drawn with ONE line, relative to its root at (0, 0). From the centre of the head it traces n petals (a rose
   // curve), then runs down the stem and round two leaves to the root. The head centre is at (hx, -H).
@@ -139,7 +143,7 @@
       for (let i = 7; i >= 1; i--) { const u = i / 8, b = -Math.sin(Math.PI * u) * wd * .75; P.push([P0[0] + dx * L * u - dy * b * sd, P0[1] + dy * L * u + dx * b * sd]); }
       P.push(P0); return P;
     };
-    const v1 = .5, v2 = .68, L1 = leaf(v1, -1), L2 = leaf(v2, 1), stem = [];
+    const v1 = V1, v2 = V2, L1 = leaf(v1, -1), L2 = leaf(v2, 1), stem = [];
     for (let i = 0; i < 14; i++) stem.push(sp(i / 14 * v1));
     stem.push(...L1);
     for (let i = 1; i <= 6; i++) stem.push(sp(lerp(v1, v2, i / 7)));
@@ -152,11 +156,11 @@
     const kPet = o.kPet || (() => 1), kLeaf = o.kLeaf ?? 1, kHeart = o.kHeart ?? 1, sw = o.sw ?? 1.5, R = o.R;
     F.petals.forEach((P, j) => {
       const k = kPet(j); if (k <= .02) return;
-      paint(P.map(p => [F.hc[0] + (p[0] - F.hc[0]) * k, F.hc[1] + (p[1] - F.hc[1]) * k]), { wash: cols[0], fill: cols[1], fillOp: 60, bleed: .06, tex: .55, border: .4, ink: null });
+      paint(P.map(p => [F.hc[0] + (p[0] - F.hc[0]) * k, F.hc[1] + (p[1] - F.hc[1]) * k]), { wash: cols[0], fill: cols[1], fillOp: 55, bleed: .035, tex: .55, border: .25, ink: null });
     });
     if (kLeaf > .02) for (const Lf of F.leaves) paint(Lf.map(p => [Lf[0][0] + (p[0] - Lf[0][0]) * kLeaf, Lf[0][1] + (p[1] - Lf[0][1]) * kLeaf]), { wash: C.leaf, ink: null });
     if (o.line !== false) {
-      inkLine(o.stemPts || F.stem, o.stemW ?? sw * 1.5, o.stemCol || C.stem, 'inkfine', .5);
+      inkLine((o.stemPts || F.stem).slice().reverse(), o.stemW ?? sw * 1.5, o.stemCol || C.stem, 'inkfine', .5);
       inkLine(o.headPts || F.head, sw, PAL.ink, 'inkfine', .5);
     }
     if (kHeart > .02) paint(ellPts(F.hc[0], F.hc[1], R * .2 * kHeart, R * .2 * kHeart, 14, .6), { wash: cols[2], ink: PAL.ink, sw: sw * .6 });
@@ -260,7 +264,7 @@
       [tLead + .25, 'neutral', { eyes: 'wide', mouth: 'o', lookX: sl(-.9), lookY: .1 }],
       [tWalk1 + .05, 'thinking', { lookX: sl(-.8), lookY: .45 }],
       [tIdea, 'idea', { lookX: sl(-.5), lookY: -.1 }],
-      [tTake, 'determined', { lookX: sl(-.7), lookY: -.5 }],
+      [tTake, 'neutral', { eyes: 'look', mouth: 'tongue', lookX: sl(-.8), lookY: kf(t, [[tTake, -.6], [tPlant, -.3], [tPlant + .3, .8]]) }],
       [tPlant + .32, 'neutral', { eyes: 'closed' }],
       [tGrow + .08, 'surprised', { lookX: sl(-.7), lookY: -.6 }],
       [tLineHold, 'hopeful', { lookX: sl(-.7), lookY: -.7 }],
@@ -282,8 +286,9 @@
     else if (t >= tFront && t < tFront + .15) pose = turn(t, tFront, tFront + .15, -.125, 0);
     if (t >= tTake && t < HOP[0]) {   // reach up for the loose end, lower it, hold it to the ground
       pose.aR = kf(t, [[tTake, 1.5], [tHand - .06, .5], [tPlant, .5], [tPlant + .3, -1], [tGrow, -1], [HOP[0], .6]]);
-      pose.rot = kf(t, [[tTake, 0], [tHand - .06, -.07], [tPlant, -.06], [tPlant + .3, -.1], [tGrow, -.1], [HOP[0], .08]]);
-      pose.sq = kf(t, [[tPlant, 0], [tPlant + .3, .13], [tGrow - .05, .13], [tGrow + .08, 0]]) + .05 * (Math.exp(-Math.max(0, t - tPat1) * 9) * (t > tPat1) + Math.exp(-Math.max(0, t - tPat2) * 9) * (t > tPat2));
+      pose.rot = kf(t, [[tTake, 0], [tHand - .06, -.07], [tPlant, -.06], [tPlant + .3, -.2], [tGrow, -.2], [HOP[0], .08]]);
+      pose.dy = 4 * Math.sin(pose.rot);   // tipping forward onto the front feet, not through the floor
+      pose.sq = kf(t, [[tPlant, 0], [tPlant + .3, .12], [tGrow - .05, .12], [tGrow + .08, 0]]) + .1 * (Math.exp(-Math.max(0, t - tPat1) * 9) * (t > tPat1) + Math.exp(-Math.max(0, t - tPat2) * 9) * (t > tPat2));
       pose.aL = -.35; mk = kf(t, [[tTake, 1], [tHand - .1, .15], [tGrow, .15]]);
     }
     if (t >= HOP[0] - .12 && t < HOP[1] + .5) {
@@ -307,11 +312,11 @@
 
   // ---------- butterfly 1 ----------
   const B1K = [
-    [tIn, -150, 290], [1.1, 140, 395], [1.9, 400, 450], [2.6, 620, 505], [tDown, KX + 2, KY0 - HANG + 4], [tTug1 - .1, KX + 4, KY0 - HANG + 12],   // hauls the knot in, sets it down
-    [tTug1 + .34, KX + 6, KY0 - HANG - 20], [tTug1 + .5, KX + 4, KY0 - HANG + 12], [tTug2 + .42, KX + 8, KY0 - HANG - 34], [tTug2 + .6, KX + 4, KY0 - HANG + 10],   // pulls up, twice
+    [tIn, 80, 215], [1.1, 250, 385], [1.9, 420, 450], [2.6, 620, 505], [tDown, KX + 2, KY0 - HANG + 4], [tDown + .3, KX + 4, KY0 - HANG + 40], [tTug1 - .05, KX + 4, KY0 - HANG + 44],   // hauls the knot in, sets it down, sags
+    [tTug1 + .3, KX + 6, KY0 - HANG - 24], [tTug1 + .44, KX + 4, KY0 - HANG + 40], [tTug2 - .03, KX + 4, KY0 - HANG + 44], [tTug2 + .4, KX + 8, KY0 - HANG - 50], [tTug2 + .54, KX + 4, KY0 - HANG + 42],   // pulls up, twice, harder
     [tGiveUp + .45, KX + 2, KY0 - RK - 24], [5.85, KX, KY0 - RK - 24],                                                // gives up: sinks onto the knot
     [6.5, 610, 570], [7.3, 585, 520], [tPop + .12, 540, 498], [8.3, 620, 540],                                        // up to watch; startled by the pop
-    [8.95, 985, 640], [tSee + .45, 1000, 668], [tSee + .65, 1000, 636], [tLead, 990, 640],                          // over to say hello, with a little dip
+    [8.95, 955, 640], [tSee + .45, 968, 668], [tSee + .65, 968, 636], [tLead, 960, 640],                          // over to say hello, with a little dip
     [tLead + .52, KX + 132, G - 9 - .46 * BS], [tLead + 1, KX + 112, 640], [tTake, KX + 122, 648],                    // back for the loose end; lifts it
     [tHand, HAND[0] - 96, HAND[1] - 104 - .46 * BS], [tHand + .5, 640, 545], [14.5, 610, 500], [tGrow, 600, 505],                // hands it over, backs off to watch
     [tGrow + .28, 500, 465], [tPet + .6, 520, 440], [tLineHold, 590, 415], [tCol + .4, 600, 425], [tJoy, 600, 425],
@@ -327,7 +332,7 @@
   function b1pos(t) {
     const p = fly(t, B1K);
     if (t < tDown) { const c = frac(t * 1.6); p[1] -= 20 * (c < .25 ? ease(c / .25) : 1 - ease((c - .25) / .75)) * (1 - seg(t, tDown - .5, tDown)); }   // labouring: heave up, sink back
-    const strain = bump(t, tTug1, tTug1 + .3, tTug1 + .46) + bump(t, tTug2, tTug2 + .38, tTug2 + .55) + .5 * bump(t, tLead + 1, tLead + 1.4, tTake);
+    const strain = Math.min(1, pull1(t) / 20) + .5 * bump(t, tLead + 1, tLead + 1.4, tTake);
     if (strain > 0) { const f = Math.floor(t * 24); p[0] += (hash(f * 1.3) - .5) * 7 * strain; p[1] += (hash(f * 2.1 + 5) - .5) * 5 * strain - 6 * strain * Math.abs(Math.sin(t * 9)); }
     const kf2 = kPerchFlower(t); if (kf2 > 0) { const s = flowerSway(t); p[0] += s * 1.2 * kf2; }
     const kh = kPerchHead(t); if (kh > 0) { const c = c1(t); p[0] += (c.x + (c.o.dx || 0) * U - CX0) * kh; p[1] += ((c.o.dy || 0) * U + 8 * U * (c.o.sq || 0)) * kh; }
@@ -346,11 +351,13 @@
 
   // ---------- the knot before it grows, and the loose end ----------
   const thud = (t, t0, a = .2) => t > t0 ? a * Math.exp(-9 * (t - t0)) * Math.cos(20 * (t - t0)) : 0;
+  const pull1 = t => t > tDown && t < tGiveUp ? Math.max(0, KY0 - HANG - fly(t, B1K)[1]) : 0;   // how far the butterfly has hauled the knot off the ground
+  const slack1 = t => t > tDown && t < tGiveUp ? clamp((fly(t, B1K)[1] - (KY0 - HANG)) / 36) : 0;
   function knot1(t) {
-    const h = fly(t - .08, B1K), lift = 16 * bump(t, tTug1 + .08, tTug1 + .34, tTug1 + .46) + 27 * bump(t, tTug2 + .08, tTug2 + .42, tTug2 + .55);
+    const h = fly(t - .08, B1K), lift = pull1(t);
     const landed = ease(seg(t, tDown - .12, tDown + .08)), quiver = seg(t, tGrow - .28, tGrow);
-    const sq = (thud(t, tDown + .05) + thud(t, tTug1 + .46, .14) + thud(t, tTug2 + .55, .2) + .07 * kPerchKnot(t) + .14 * quiver * quiver) * landed;
-    const c = mix2([h[0], h[1] + HANG], [KX + 3.5 * Math.sin(t * 75) * quiver, KY0 - lift + RK * sq * .8], landed);
+    const sq = (thud(t, tDown + .05) + thud(t, tTug1 + .4, .16) + thud(t, tTug2 + .5, .24) + .07 * kPerchKnot(t) + .14 * quiver * quiver - .16 * Math.min(1, lift / 40)) * landed;
+    const c = mix2([h[0], h[1] + HANG], [KX + 3.5 * Math.sin(t * 75) * quiver, KY0 - lift + RK * Math.max(0, sq) * .8], landed);
     const swing = clamp((fly(t - .22, B1K)[0] - fly(t, B1K)[0]) / 70, -.6, .6) * (1 - landed);
     return { c, sq, rot: swing };
   }
@@ -374,7 +381,7 @@
       const wv = ease(seg(t, tPlant, tPlant + .25)), slack = Math.max(0, 100 - Math.hypot(tip[0] - A[0], tip[1] - A[1]));
       const flat = seg(t, tGiveUp + .3, tGiveUp + .5) * (1 - seg(t, tLead + .5, tLead + .7));   // lying on the ground: no sag below it
       const onFloor = [k.c[0] + RK * .95, G - 5];
-      const stem = wv > 0 ? thread(A, tip, 6, handAt(t), wv) : thread(A, tip, slack * .5 + 6, onFloor, flat, .45);
+      const stem = wv > 0 ? thread(A, tip, 6, handAt(t), wv) : thread(A, tip, slack * .5 + 6 + 30 * slack1(t), onFloor, flat, .45);
       shadow(k.c[0], G + 5, RK * 1.15 * (1 - .5 * (1 - ease(seg(t, tDown - .5, tDown)))), ease(seg(t, tDown - .6, tDown)));
       boilSeed('line');
       inkLine(stem, LW, PAL.ink, 'inkfine', .5);
@@ -473,7 +480,7 @@
       const b = b1(t); bfly(b.p[0], b.p[1], BS, b.o);
       boilSeed('b1marks');
       const sweat = seg(t, tTug2 + .15, tTug2 + .4) * (1 - seg(t, 5.7, 5.95)); if (sweat > 0) emote('sweat', b.p[0] + 62, b.p[1] - 56, 13, sweat, t - tTug2);
-      if (t > tHue && t < tGone + .5) for (let i = 1; i <= 6; i++) { const tt = Math.floor((t - i * .09) * 12) / 12, q = b1pos(tt); sparkle(q[0] + (hash(tt * 31 + i) - .5) * 40, q[1] + 26 + (hash(tt * 17 + i) - .5) * 30, 13, (t - tt) / .75 + .05, i % 2 ? C.b1[1] : C.b1[0]); }
+      if (t > tHue && t < tGone + .5) for (let i = 1; i <= 6; i++) { const tt = Math.floor((t - i * .09) * 12) / 12, q = b1pos(tt); if (Math.hypot(q[0] - b.p[0], q[1] - b.p[1]) > 46) sparkle(q[0] + (hash(tt * 31 + i) - .5) * 40, q[1] + 26 + (hash(tt * 17 + i) - .5) * 30, 13, (t - tt) / .75 + .05, i % 2 ? C.b1[1] : C.b1[0]); }
       burst(b.p[0], b.p[1], 40, 96, 9, seg(t, tHue, tHue + .45), C.b1[0], 1.1);
       const hk = seg(t, tBoop + .03, tBoop + .3) * (1 - seg(t, tBoop + 1.1, tBoop + 1.4)); if (hk > 0) emote('heart', CX0 + 96, G - 8 * U - 54 - 22 * seg(t, tBoop, tBoop + 1.4), 13, hk, t - tBoop);
     }

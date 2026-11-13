@@ -67,7 +67,7 @@
     [tBoop - .15, 1130, 620, 1.55], [tLift + .2, 1140, 620, 1.6],
     [tGone, 1010, 520, 1.3], [tTurn + .4, 1075, 610, 1.45], [tPull0, 1070, 615, 1.5],
     [tPull1, 1450, 640, .5], [tB2 + .5, 1460, 642, .5],                        // the garden
-    [tPop2 - .15, 2545, 835, 1.1], [tEnd, 2550, 838, 1.16],                       // the second meeting
+    [tPop2 - .15, 2560, 850, 1.3], [tEnd, 2562, 852, 1.36],                       // the second meeting
   ].map(([t, x, y, z]) => [t, [x, y, Math.log(z)]]);
   function cam(t) {
     const k = kf(t, CAMK);

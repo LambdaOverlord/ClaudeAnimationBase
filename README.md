@@ -23,9 +23,9 @@ npm install
 node render.mjs --clip --out=out/video.mp4
 ```
 
-That renders the 11-second demo in [src/scenes/demo.js](src/scenes/demo.js). Open [studio.html](studio.html) in Chrome to scrub through it. Add `?loop=emotions` or `?loop=views` to see the model sheets. If Chrome isn't in a standard location, pass `--chrome=<path>` or set `CHROME_PATH`.
+That renders whichever scene [studio.html](studio.html) loads. Right now that's [src/scenes/every_time.js](src/scenes/every_time.js), a 41-second film in one shot (the finished video is [docs/every_time.mp4](docs/every_time.mp4), its storyboard is [STORYBOARD.md](STORYBOARD.md), and `node src/scenes/every_time.score.mjs` regenerates its soundtrack). The kit's original 11-second demo is [src/scenes/demo.js](src/scenes/demo.js): to render it instead, put its script tag back in studio.html and set `duration: 11, bpm: 120` in [src/config.js](src/config.js). Open [studio.html](studio.html) in Chrome to scrub through the video. Add `?loop=emotions` or `?loop=views` to see the model sheets. If Chrome isn't in a standard location, pass `--chrome=<path>` or set `CHROME_PATH`.
 
-On Linux, `render.mjs` starts Chrome with `--no-sandbox` (Ubuntu 23.10+ blocks Chrome's sandbox in headless use) and also finds a Chromium installed by Playwright. With no GPU at all, add `--soft-gl` to render WebGL in software: slow on watercolour fills, but it works. On a headless Linux machine with an NVIDIA GPU (a cloud or cluster node), add `--gpu-angle=gl-egl` (or `vulkan`); `node gpu_probe.mjs <chrome path>` shows which renderer each set of flags gets.
+On Linux, `render.mjs` starts Chrome with `--no-sandbox` (Ubuntu 23.10+ blocks Chrome's sandbox in headless use) and also finds a Chromium installed by Playwright. With no GPU at all, add `--soft-gl` to render WebGL in software: slow, but it works. If Mesa and Xvfb are installed (most Linux machines, containers included), `./render.sh` is much faster: it runs `xvfb-run -a node render.mjs --llvmpipe` with whatever arguments you give it, which renders through Mesa's llvmpipe (about ten times faster than `--soft-gl` on the 4-core machine it was written on, watercolour fills included). On a headless Linux machine with an NVIDIA GPU (a cloud or cluster node), add `--gpu-angle=gl-egl` (or `vulkan`); `node gpu_probe.mjs <chrome path>` shows which renderer each set of flags gets.
 
 ## What's here
 
@@ -36,6 +36,7 @@ On Linux, `render.mjs` starts Chrome with `--no-sandbox` (Ubuntu 23.10+ blocks C
 | [src/core.js](src/core.js) | Painting, timing, motion helpers, camera, light, paper |
 | [src/timeline.js](src/timeline.js) | Shots, loops and the brush-wipe transition |
 | [src/config.js](src/config.js) | Length and tempo |
-| [src/scenes/](src/scenes/) | Your video goes here (the demo is an example) |
+| [src/scenes/](src/scenes/) | Your video goes here (the demo is an example; `every_time.js` is a full film, with its soundtrack in `every_time.score.mjs`) |
 | [render.mjs](render.mjs) | Headless renderer: contact sheets, frame strips, crops, stills, MP4 |
+| [render.sh](render.sh) | The same, on a machine with no GPU (Mesa's llvmpipe under Xvfb) |
 | [docs/](docs/) | Model sheets: [emotions](docs/emotions.jpg) (also [animated](docs/emotions.webp)) and [views, motion and hats](docs/views.jpg) |

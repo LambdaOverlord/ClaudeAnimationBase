@@ -155,9 +155,9 @@ function reverb(x) {
 }
 const end = Math.round(DUR * SR), pcm = Buffer.alloc(44 + end * 4); let peak = 0;
 const mix = [0, 1].map(c => { const w = reverb(wet[c]), m = new Float32Array(end); for (let i = 0; i < end; i++) { m[i] = dry[c][i] + w[i] * 1.1; peak = Math.max(peak, Math.abs(m[i])); } return m; });
-const gain = .82 / peak, fadeOut = Math.round(.35 * SR);
+const gain = .82 / peak, fadeOut = Math.round(.35 * SR), DRIVE = 1.8;   // a soft limiter: lifts the quiet passages, rounds off the loudest hits
 pcm.write('RIFF', 0); pcm.writeUInt32LE(36 + end * 4, 4); pcm.write('WAVEfmt ', 8); pcm.writeUInt32LE(16, 16); pcm.writeUInt16LE(1, 20); pcm.writeUInt16LE(2, 22);
 pcm.writeUInt32LE(SR, 24); pcm.writeUInt32LE(SR * 4, 28); pcm.writeUInt16LE(4, 32); pcm.writeUInt16LE(16, 34); pcm.write('data', 36); pcm.writeUInt32LE(end * 4, 40);
-for (let i = 0; i < end; i++) for (let c = 0; c < 2; c++) { const f = Math.min(1, (end - i) / fadeOut); pcm.writeInt16LE(Math.round(Math.tanh(mix[c][i] * gain * 1.15) / Math.tanh(1.15) * f * 32767 * .97), 44 + i * 4 + c * 2); }
+for (let i = 0; i < end; i++) for (let c = 0; c < 2; c++) { const f = Math.min(1, (end - i) / fadeOut); pcm.writeInt16LE(Math.round(Math.tanh(mix[c][i] * gain * DRIVE) / Math.tanh(DRIVE) * f * 32767 * .97), 44 + i * 4 + c * 2); }
 mkdirSync('assets', { recursive: true }); writeFileSync('assets/every_time.wav', pcm);
 console.log(`assets/every_time.wav  ${DUR}s  peak before gain ${peak.toFixed(2)}`);

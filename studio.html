@@ -26,10 +26,11 @@
 <script src="src/core.js"></script>
 <script src="src/clawd.js"></script>
 <script src="src/timeline.js"></script>
+<script src="src/extras.js"></script>
 <!-- reference sheets (standalone loops) -->
 <script src="src/sheets.js"></script>
-<!-- your video: add a script per scene file, in order -->
-<script src="src/scenes/every_time.js"></script>
+<!-- the film's scene files, from FILMS in src/config.js (?film=<name> picks one) -->
+<script>for (const src of PROJECT.scenes) document.write('<script src="' + src + '"><\/script>');</script>
 <script>
   // Open studio.html?loop=emotions (or views) to scrub a standalone loop instead of the video.
   const q = new URLSearchParams(location.search).get('loop'); if (q && LOOPS[q]) window.LOOP = LOOPS[q];

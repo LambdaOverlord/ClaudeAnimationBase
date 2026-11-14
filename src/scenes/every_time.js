@@ -124,20 +124,7 @@
   }
 
   // ---------- Clawd as dabs of paint ----------
-  // Each dab has a home cell on Clawd's body (in u, same coordinates as clawd()) and a colour of its own that turns to
-  // clay as it arrives. Legs and arms first, so the body's cells cover their roots.
-  const DABS = (() => {
-    const d = [];
-    for (const lx of [-4, -2, 1, 3]) d.push({ x: lx + .5, y: -1.3, w: 1.05, h: 2.3, col: PAL.clayDk });
-    for (const s of [-1, 1]) d.push({ x: s * 6, y: -4.5, w: 2.3, h: 1.05, col: PAL.clay });
-    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) {
-      const lit = r === 0 && (c === 1 || c === 2);
-      d.push({ x: -5 + (c + .5) * 10 / 6, y: -8 + (r + .5) * 1.5, w: 10 / 6 * 1.1, h: 1.5 * 1.12, col: mixCol(PAL.clay, lit ? '#F5B394' : PAL.clayDk, lit ? .45 : r === 3 ? .4 : .05 + .12 * hash(r * 6 + c)) });
-    }
-    const order = d.map((_, i) => i).sort((a, b) => hash(a * 7.7 + 3) - hash(b * 7.7 + 3));
-    order.forEach((i, rank) => { d[i].rank = rank / (d.length - 1); });
-    return d.map((q, i) => ({ ...q, i, ang: hash(i * 3.1 + 1) * TAU, up: -Math.PI / 2 + (hash(i * 4.1 + 9) - .5) * 2.6 + q.x * .05, spin: (hash(i * 2.9 + 4) - .5) * 2.2, hue: HUES[i % HUES.length] }));
-  })();
+  const DABS = clawdDabs(HUES);
   // One dab at progress k (0 = far along its curved path, 1 = home): a tapered stroke that trails behind while it flies
   // and squares up into its cell as it lands.
   function dab(d, home, u, k, o) {
